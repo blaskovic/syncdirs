@@ -7,5 +7,5 @@ Usage
 <pre>
 usage: syncdirs [-h] [-d <diff command>] <source> <target>
        First directory will be synced to second
-</pre
+</pre>
 
