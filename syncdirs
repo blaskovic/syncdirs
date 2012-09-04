@@ -13,7 +13,7 @@ DIFF_COMMAND="git diff --color"
 function print_help()
 {
     echo "usage: syncdirs [-h] [-d <diff command>] <source> <target>"
-    echo "       First directory will be synced to second"
+    echo "       First directory will be synced to second directory"
 }
 
 function print_error()
@@ -69,6 +69,12 @@ DIR2_fuck_you_bash="$( echo $DIR2 | sed "s#/#\\\/#g" )"
 # Loop
 for file in $( find "$DIR1" | sed "s/$DIR1_fuck_you_bash//" )
 do
+    # Directory?
+    if [ -d "${DIR1}${file}" ] ; then
+        mkdir -p "${DIR2}${file}"
+        continue
+    fi
+
     diff "${DIR1}${file}" "${DIR2}${file}" 2>&1 >/dev/null
     
     # Any changes?
