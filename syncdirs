@@ -1,0 +1,103 @@
+#!/bin/bash
+
+#
+# Config
+#
+
+DIFF_COMMAND="git diff --color"
+
+#
+# Functions
+#
+
+function print_help()
+{
+    echo "usage: syncdirs [-h] [-d <diff command>] <source> <target>"
+    echo "       First directory will be synced to second"
+}
+
+function print_error()
+{
+    echo "$@" >&2
+    exit 1
+}
+
+#
+# Parse arguments
+#
+
+while getopts ":hd:" opt; do
+    
+    case $opt in
+
+        # Help
+        h)
+            print_help
+            exit 0
+        ;;
+        # Diff command
+        d)
+            DIFF_COMMAND="$OPTARG"
+        ;;
+
+        :)
+            echo "You need to specify argument for -$OPTARG"
+            exit 1
+        ;;
+
+        \?)
+            echo "Invalid option: -$OPTARG" >&2
+        ;;
+    
+    esac
+
+done
+
+shift $((OPTIND-1))
+
+DIR1="`readlink -f \"$1\"`"
+DIR2="`readlink -f \"$2\"`"
+
+# Check for correct directories
+test -d "$DIR1" || print_error "'$DIR1' is not a directory"
+test -d "$DIR2" || print_error "'$DIR2' is not a directory"
+
+# Am I stupid or what? Pull request please! :D
+DIR1_fuck_you_bash="$( echo $DIR1 | sed "s#/#\\\/#g" )"
+DIR2_fuck_you_bash="$( echo $DIR2 | sed "s#/#\\\/#g" )"
+
+# Loop
+for file in $( find "$DIR1" | sed "s/$DIR1_fuck_you_bash//" )
+do
+    diff "${DIR1}${file}" "${DIR2}${file}" 2>&1 >/dev/null
+    
+    # Any changes?
+    if [ $? -ne 0 ] ; then
+
+        # Diff it with custom command
+        $DIFF_COMMAND "${DIR2}${file}" "${DIR1}${file}"
+
+        # Get modification dates
+        file1_date=$( stat -c %Y "${DIR1}${file}" )
+        file2_date=$( stat -c %Y "${DIR2}${file}" )
+
+        # Is target file newer?
+        if [ -f "${DIR2}${file}" ] && [ $file2_date -gt $file1_date ] ; then
+            echo "WARNING! The target file is NEWER and can be overwritten!"
+        fi
+        
+        # Want to copy it?
+        echo -n "Do you want to copy file1 to file2? [y/n] "
+        read answer
+        
+        case $answer in
+            y)
+                echo "cp -f \"${DIR1}${file}\" \"${DIR2}${file}\""
+                cp -f "${DIR1}${file}" "${DIR2}${file}"
+            ;;
+        esac
+
+        echo
+    fi
+
+done
