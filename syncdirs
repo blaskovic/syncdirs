@@ -26,7 +26,10 @@ function print_error()
 # Parse arguments
 #
 
-while getopts ":hd:" opt; do
+# Number of last edited files
+NUM_OF_FILES=10
+
+while getopts ":hd:n:" opt; do
     
     case $opt in
 
@@ -39,7 +42,10 @@ while getopts ":hd:" opt; do
         d)
             DIFF_COMMAND="$OPTARG"
         ;;
-
+        # Number of last edited files
+        n)
+            NUM_OF_FILES=$OPTARG
+        ;;
         :)
             echo "You need to specify argument for -$OPTARG"
             exit 1
@@ -66,8 +72,17 @@ test -d "$DIR2" || print_error "'$DIR2' is not a directory"
 DIR1_fuck_you_bash="$( echo $DIR1 | sed "s#/#\\\/#g" )"
 DIR2_fuck_you_bash="$( echo $DIR2 | sed "s#/#\\\/#g" )"
 
+# Show us the list
+echo "List of last edited files"
+find "$DIR1" -type f -printf '%T@ %p\n' | sort -k 1nr | sed 's/^[^ ]* //' | head -n $NUM_OF_FILES | nl
+
+echo -n "Do you want to continue? [y/n] "
+read answer
+
+test "$answer" != "y" && exit 0
+
 # Loop
-for file in $( find "$DIR1" | sed "s/$DIR1_fuck_you_bash//" )
+for file in $( find "$DIR1" -type f -printf '%T@ %p\n' | sort -k 1nr | sed 's/^[^ ]* //' | head -n $NUM_OF_FILES | sed "s/$DIR1_fuck_you_bash//" )
 do
     # Directory?
     if [ -d "${DIR1}${file}" ] ; then
